@@ -17,3 +17,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+fonts:
+  - family: Monsterrat
+    fonts:
+      - asset: fonts/Montserrat-Italic-VariableFont_wght.ttf
+        weight: 500
+      - asset: fonts/Montserrat-VariableFont_wght.ttf
+        weight: 700
+
