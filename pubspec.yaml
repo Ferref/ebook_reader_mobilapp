@@ -9,8 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-    assets:
-      - /assets/icons/
   flutter_svg: ^1.1.6
 
 dev_dependencies:
@@ -20,12 +18,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/
 
-fonts:
-  - family: Monsterrat
-    fonts:
-      - asset: fonts/Montserrat-Italic-VariableFont_wght.ttf
-        weight: 500
-      - asset: fonts/Montserrat-VariableFont_wght.ttf
-        weight: 700
-
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: fonts/Montserrat-Italic-VariableFont_wght.ttf
+          weight: 500
+        - asset: fonts/Montserrat-VariableFont_wght.ttf
+          weight: 700
