@@ -24,9 +24,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0.0,
       centerTitle: true,
       leading: GestureDetector(
-        onTap: () {
-          // Add your onTap functionality here
-        },
+        onTap: () {},
         child: Container(
           margin: const EdgeInsets.all(10),
           alignment: Alignment.center,
