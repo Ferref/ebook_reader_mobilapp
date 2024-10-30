@@ -1,59 +1,55 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:epub_view/epub_view.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 class BookLoader {
-  // Future azaz kesobb fejezodik be
+  // Fajl betoltese es megnyitasa a megfelelo olvasoval
   Future<void> loadBook(BuildContext context) async {
-    // Megjelenitunk egy fajlvalaszto ablakot
+    // Fajlvalaszto ablak megjelenitese
     final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['epub', 'pdf'] // Majd prc is lesz benne
-        );
+      type: FileType.custom,
+      allowedExtensions: ['epub', 'pdf'], // EPUB es PDF fajlokat engedelyezunk
+    );
 
     if (result != null) {
       // Ha a felhasznalo valasztott fajlt
-      final file =
-          result.files.first; // Csak egy fajlt tud kivalasztani egyszerre
-      final filePath = file.path!; // Nem null ertek (!)
+      final file = result.files.first;
+      final filePath = file.path!; // Fajl eleresi utja
 
       if (file.extension == 'epub') {
-        _openEpubReader(context, filePath);
+        _openEpubReader(context, filePath); // EPUB olvaso megnyitasa
       } else if (file.extension == 'pdf') {
-        _openPdfReader(context, filePath);
-      }
-      // else if(file.extension == 'prc'){
-      // _openPrcReader(context, filePath);
-      //}
-      else {
-        _showUnsupportedFileDialog(context);
+        _openPdfReader(context, filePath); // PDF olvaso megnyitasa
+      } else {
+        _showUnsupportedFileDialog(context); // Uzenet nem tamogatott fajlra
       }
     }
   }
 
-  // Itt nincs private metodus igy ezt imitaljuk a '_' jelolessel a metodusok elott
+  // EPUB olvaso oldal megnyitasa
   void _openEpubReader(BuildContext context, String filePath) {
     Navigator.push(
-      context, // Az aktualis context ahol a navigacio megtortenik
+      context,
       MaterialPageRoute(
         builder: (context) => EpubReaderPage(filePath: filePath),
       ),
     );
   }
 
-  // PDF olvaso elinditasa/megnyitasa
+  // PDF olvaso oldal megnyitasa
   void _openPdfReader(BuildContext context, String filePath) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PdfReaderPage(filePath: filePath),
-      ), // PDF olvaso oldal felepitese
+      ),
     );
   }
 
-  // Nem tamogatott fajltipus kezelo
+  // Nem tamogatott fajltipus eseten megjeleno uzenet
   void _showUnsupportedFileDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -62,9 +58,8 @@ class BookLoader {
         content: const Text('Kerjuk, valasszon egy EPUB vagy PDF fajlt'),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.of(context).pop(), // Dialogus bezarasa (OK)
-            child: const Text('OK'), // OK text
+            onPressed: () => Navigator.of(context).pop(), // Dialogus bezarasa
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -73,24 +68,78 @@ class BookLoader {
 }
 
 // EPUB olvaso oldal
-class EpubReaderPage extends StatelessWidget {
+class EpubReaderPage extends StatefulWidget {
   final String filePath;
-  final EpubController _epubController;
 
-  EpubReaderPage({super.key, required this.filePath})
-      : _epubController =
-            EpubController(document: EpubDocument.openFile(File(filePath)));
+  EpubReaderPage({super.key, required this.filePath});
+
+  @override
+  _EpubReaderPageState createState() => _EpubReaderPageState();
+}
+
+class _EpubReaderPageState extends State<EpubReaderPage> {
+  late EpubController _epubController;
+
+  @override
+  void initState() {
+    super.initState();
+    _epubController = EpubController(
+      document:
+          EpubDocument.openFile(File(widget.filePath)), // EPUB fajl megnyitasa
+    );
+    _loadBookmark(); // Korabbi konyvjelzo betoltese, ha van
+  }
+
+  // Konyvjelzo mentese
+  Future<void> _saveBookmark() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentLocation = await _epubController.generateEpubCfi();
+    if (currentLocation != null) {
+      await prefs.setString('bookmark_${widget.filePath}', currentLocation);
+    }
+  }
+
+  // Konyvjelzo betoltese
+  Future<void> _loadBookmark() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLocation = prefs.getString('bookmark_${widget.filePath}');
+    if (savedLocation != null) {
+      _epubController.gotoEpubCfi(savedLocation);
+    }
+  }
+
+  @override
+  void dispose() {
+    _epubController.dispose(); // Felszabaditja a controller eroforrasait
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-            "EPUB Olvaso"), // Fejlec, ahol az EPUB olvaso neve jelenik meg
+        // Aktualis fejezet neve (Appbar)
+        title: EpubViewActualChapter(
+          controller: _epubController,
+          builder: (chapterValue) => Text(
+            chapterValue?.chapter?.Title?.replaceAll('\n', '').trim() ?? '',
+            textAlign: TextAlign.start,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark),
+            onPressed: _saveBookmark, // Konyvjelzo mentese
+          ),
+        ],
+      ),
+      // Tartalomjegyzek mint oldalso menu
+      drawer: Drawer(
+        child: EpubViewTableOfContents(controller: _epubController),
       ),
       body: EpubView(
-          controller:
-              _epubController), // EPUB megjelenitese az EpubView widgettel
+        controller: _epubController,
+      ),
     );
   }
 }
@@ -110,6 +159,15 @@ class PdfReaderPage extends StatelessWidget {
       ),
       body: PDFView(
         filePath: filePath, // A PDF fajl megjelenitese a PDFView widgetben
+        enableSwipe:
+            true, // Engedelyezi a lapozast oldalra (suhintassal/pockolessel)
+        swipeHorizontal: true, // Vízszintes lapozas
+        onError: (error) {
+          print(error); // Hibauzenet a konzolon
+        },
+        onRender: (pages) {
+          print("Total pages: $pages"); // Oldalak szamanak kiirasa
+        },
       ),
     );
   }
