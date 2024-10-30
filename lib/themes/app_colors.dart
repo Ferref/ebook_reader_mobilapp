@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
+class EbookAppColors {
   static const Color background = Color(0xFF121212); // Dark Gray
   static const Color text = Color(0xFFE0E0E0); // Light Gray
   static const Color highlight = Color(0xFFFFAB00); // Amber
